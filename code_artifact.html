@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>냥글냥글 월드 (NyangNyang World) - 귀여운 고양이 수집 어드벤처</title>
+    <!-- Open Graph for Safe Sharing -->
+    <meta property="og:title" content="냥글냥글 월드 (NyangNyang World)">
+    <meta property="og:description" content="신비롭고 사랑스러운 고양이들을 수집하는 힐링 어드벤처 웹게임!">
+    <meta property="og:type" content="website">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Gowun Dodum', sans-serif;
+            background: linear-gradient(135deg, #fff0f5 0%, #e6e6fa 50%, #e0ffff 100%);
+            touch-action: manipulation;
+            user-select: none;
+        }
+        .font-jua { font-family: 'Jua', sans-serif; }
+        .font-nunito { font-family: 'Nunito', sans-serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.4); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #f472b6; border-radius: 10px; }
+
+        /* Floating Animation */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(1deg); }
+        }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        
+        @keyframes pulse-glow {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(236, 72, 153, 0.6)); }
+            50% { filter: drop-shadow(0 0 30px rgba(168, 85, 247, 0.9)); }
+        }
+        .animate-glow { animation: pulse-glow 2s infinite; }
+
+        /* Floating Hearts Animation */
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-70px) scale(1.5); }
+        }
+        .heart-particle {
+            position: absolute;
+            pointer-events: none;
+            animation: floatUp 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            color: #ec4899;
+            font-size: 1.5rem;
+        }
+
+        /* Glassmorphism card */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 10px 25px -5px rgba(244, 114, 182, 0.15);
+        }
+
+        /* Shimmer Effect */
+        .shimmer {
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-700 flex flex-col items-center justify-between pb-20 md:pb-6 relative overflow-x-hidden">
+
+    <!-- Fullscreen FX Canvas for Legendary Encounters -->
+    <canvas id="fxCanvas" class="fixed inset-0 pointer-events-none z-50 hidden"></canvas>
+
+    <!-- Top Navigation Header -->
+    <header class="w-full max-w-4xl px-4 py-3 mt-2 flex items-center justify-between z-10">
+        <!-- Logo -->
+        <div class="flex items-center space-x-2 cursor-pointer" onclick="switchTab('explore')">
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-400 to-purple-400 flex items-center justify-center text-white text-xl shadow-lg animate-float">
+                🐱
+            </div>
+            <div>
+                <h1 class="text-xl md:text-2xl font-jua text-pink-600 tracking-wide drop-shadow-sm">냥글냥글 월드</h1>
+                <p class="text-xs text-purple-500 -mt-1 hidden sm:block">NyangNyang World</p>
+            </div>
+        </div>
+
+        <!-- Resources & Level Status -->
+        <div class="flex items-center space-x-2 sm:space-x-4">
+            <!-- Level Bar -->
+            <div class="glass-panel px-3 py-1.5 rounded-full flex items-center space-x-2">
+                <span id="playerLv" class="text-xs font-bold bg-pink-500 text-white px-2 py-0.5 rounded-full">Lv.1</span>
+                <div class="w-16 sm:w-24 bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div id="playerExpBar" class="bg-gradient-to-r from-pink-400 to-purple-400 h-full w-0% transition-all duration-500"></div>
+                </div>
+            </div>
+
+            <!-- Energy/Nectar -->
+            <div class="glass-panel px-3 py-1 rounded-full flex items-center space-x-1 text-sm font-bold text-amber-600">
+                <span>⚡</span>
+                <span id="playerEnergy">10/10</span>
+            </div>
+
+            <!-- Coins -->
+            <div class="glass-panel px-3 py-1 rounded-full flex items-center space-x-1 text-sm font-bold text-yellow-600">
+                <span>🪙</span>
+                <span id="playerCoins">100</span>
+            </div>
+
+            <!-- Sound & Settings Toggle -->
+            <button onclick="toggleAudio()" id="audioBtn" class="w-9 h-9 rounded-full glass-panel flex items-center justify-center text-slate-600 hover:text-pink-500 transition">
+                <i class="fas fa-volume-up"></i>
+            </button>
+            <button onclick="openShareModal()" class="w-9 h-9 rounded-full glass-panel flex items-center justify-center text-pink-500 hover:scale-105 transition">
+                <i class="fas fa-share-alt"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN APP CONTAINER -->
+    <main class="w-full max-w-4xl px-4 my-2 flex-1 flex flex-col justify-center">
+
+        <!-- 1. EXPLORE TAB (탐험) -->
+        <section id="tab-explore" class="tab-content w-full flex flex-col items-center">
+            
+            <!-- Region Selector Grid -->
+            <div id="regionSelectContainer" class="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 my-4">
+                <!-- Regions generated dynamically via JS -->
+            </div>
+
+            <!-- Active Encounter Screen (Hidden by Default) -->
+            <div id="encounterArea" class="w-full glass-panel rounded-3xl p-6 flex flex-col items-center relative overflow-hidden hidden shadow-2xl transition-all">
+                <button onclick="leaveEncounter()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl z-10">
+                    <i class="fas fa-times-circle"></i>
+                </button>
+
+                <!-- Environment Title Badge -->
+                <span id="encRegionBadge" class="text-xs font-bold px-3 py-1 rounded-full bg-pink-100 text-pink-600 mb-2">
+                    햇살 꽃밭 구역
+                </span>
+
+                <!-- Encounter Visual Field -->
+                <div id="encVisualBox" class="w-full h-64 sm:h-80 rounded-2xl relative flex items-center justify-center my-2 bg-gradient-to-b from-sky-100 to-pink-100 border border-white/80 overflow-hidden shadow-inner">
+                    <!-- Dynamic Background Decor -->
+                    <div id="encBgDecor" class="absolute inset-0 pointer-events-none opacity-40"></div>
+                    
+                    <!-- Cat SVG Container -->
+                    <div id="encCatWrapper" class="relative z-10 w-44 h-44 sm:w-56 sm:h-56 flex items-center justify-center transition-all duration-700 transform scale-90">
+                        <!-- SVG dynamically inserted -->
+                    </div>
+
+                    <!-- Sparkle effect overlay for rare cats -->
+                    <div id="encSparkles" class="absolute inset-0 pointer-events-none hidden"></div>
+                </div>
+
+                <!-- Cat Info Header -->
+                <div class="text-center my-2">
+                    <div class="flex items-center justify-center space-x-2">
+                        <span id="encCatRarityBadge" class="text-xs px-2.5 py-0.5 rounded-full font-bold text-white bg-slate-400">Common</span>
+                        <h2 id="encCatName" class="text-2xl font-jua text-slate-800">야생의 고양이</h2>
+                    </div>
+                    <p id="encCatDesc" class="text-xs sm:text-sm text-slate-500 mt-1 max-w-md">기본 고양이 설명이 들어갑니다.</p>
+                </div>
+
+                <!-- Catch Probability Indicator -->
+                <div class="w-full max-w-xs bg-slate-100 rounded-full h-4 relative my-2 overflow-hidden border border-slate-200">
+                    <div id="encProbBar" class="bg-gradient-to-r from-emerald-400 to-teal-500 h-full w-50% transition-all duration-300"></div>
+                    <span id="encProbText" class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-700">포획 확률 50%</span>
+                </div>
+
+                <!-- Action Controls (Items & Catch Button) -->
+                <div class="w-full max-w-md flex flex-col gap-3 mt-3">
+                    <!-- Item Selection Bar -->
+                    <div class="flex items-center justify-center space-x-3 bg-slate-50 p-2 rounded-2xl border border-slate-200/80">
+                        <button onclick="useEncounterItem('churu')" class="flex-1 py-1.5 px-2 bg-white rounded-xl shadow-sm border border-pink-200 flex flex-col items-center hover:bg-pink-50 transition active:scale-95">
+                            <span class="text-lg">🍡</span>
+                            <span class="text-[11px] font-bold text-slate-700">츄르 (<span id="count-churu">3</span>)</span>
+                            <span class="text-[9px] text-pink-500">+15% 확률</span>
+                        </button>
+                        <button onclick="useEncounterItem('toy')" class="flex-1 py-1.5 px-2 bg-white rounded-xl shadow-sm border border-purple-200 flex flex-col items-center hover:bg-purple-50 transition active:scale-95">
+                            <span class="text-lg">🧸</span>
+                            <span class="text-[11px] font-bold text-slate-700">장난감 (<span id="count-toy">2</span>)</span>
+                            <span class="text-[9px] text-purple-500">+25% 확률</span>
+                        </button>
+                        <button onclick="useEncounterItem('catnip')" class="flex-1 py-1.5 px-2 bg-white rounded-xl shadow-sm border border-emerald-200 flex flex-col items-center hover:bg-emerald-50 transition active:scale-95">
+                            <span class="text-lg">🌿</span>
+                            <span class="text-[11px] font-bold text-slate-700">캣잎 (<span id="count-catnip">1</span>)</span>
+                            <span class="text-[9px] text-emerald-500">+40% 확률</span>
+                        </button>
+                    </div>
+
+                    <!-- Main Catch Button -->
+                    <button onclick="attemptCatch()" id="catchBtn" class="w-full py-3.5 rounded-2xl font-jua text-xl text-white bg-gradient-to-r from-pink-500 via-rose-500 to-purple-500 shadow-lg shadow-pink-500/30 hover:brightness-105 active:scale-98 transition transform flex items-center justify-center space-x-2">
+                        <span>📦</span>
+                        <span>냥켓몬 상자로 포획 시도!</span>
+                    </button>
+                </div>
+            </div>
+
+        </section>
+
+
+        <!-- 2. CATDEX TAB (도감) -->
+        <section id="tab-catdex" class="tab-content w-full flex-col items-center hidden">
+            <!-- Dex Header Info -->
+            <div class="w-full glass-panel rounded-3xl p-5 mb-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-jua text-pink-600 flex items-center space-x-2">
+                        <span>📖</span> <span>냥글냥글 고양이 도감</span>
+                    </h2>
+                    <p class="text-xs text-slate-500">세상의 모든 신비로운 고양이를 수집해보세요!</p>
+                </div>
+                <!-- Progress bar -->
+                <div class="w-full md:w-64 flex flex-col space-y-1">
+                    <div class="flex justify-between text-xs font-bold text-slate-600">
+                        <span>도감 완성률</span>
+                        <span id="dexProgressPercent">0 / 32 (0%)</span>
+                    </div>
+                    <div class="w-full bg-slate-200 h-3 rounded-full overflow-hidden p-0.5">
+                        <div id="dexProgressBar" class="bg-gradient-to-r from-pink-400 via-purple-400 to-sky-400 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search & Filters -->
+            <div class="w-full flex flex-wrap items-center justify-between gap-2 mb-4">
+                <!-- Rarity Filter buttons -->
+                <div class="flex flex-wrap gap-1.5 text-xs font-bold">
+                    <button onclick="filterDex('all')" class="dex-filter-btn px-3 py-1.5 rounded-full bg-pink-500 text-white shadow-sm" data-filter="all">전체</button>
+                    <button onclick="filterDex('Common')" class="dex-filter-btn px-3 py-1.5 rounded-full bg-white text-slate-600 hover:bg-slate-100" data-filter="Common">일반</button>
+                    <button onclick="filterDex('Rare')" class="dex-filter-btn px-3 py-1.5 rounded-full bg-white text-slate-600 hover:bg-slate-100" data-filter="Rare">희귀</button>
+                    <button onclick="filterDex('Epic')" class="dex-filter-btn px-3 py-1.5 rounded-full bg-white text-slate-600 hover:bg-slate-100" data-filter="Epic">에픽</button>
+                    <button onclick="filterDex('Legendary')" class="dex-filter-btn px-3 py-1.5 rounded-full bg-white text-slate-600 hover:bg-slate-100" data-filter="Legendary">전설</button>
+                    <button onclick="filterDex('Mythical')" class="dex-filter-btn px-3 py-1.5 rounded-full bg-white text-slate-600 hover:bg-slate-100" data-filter="Mythical">신화</button>
+                </div>
+
+                <!-- Search Input -->
+                <div class="relative flex-1 max-w-xs min-w-[160px]">
+                    <input type="text" id="dexSearchInput" oninput="renderDexGrid()" placeholder="고양이 이름 검색..." class="w-full pl-8 pr-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs focus:outline-none focus:border-pink-400 shadow-sm">
+                    <i class="fas fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                </div>
+            </div>
+
+            <!-- Dex Grid Container -->
+            <div id="dexGrid" class="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                <!-- Dex Cat Cards injected dynamically -->
+            </div>
+        </section>
+
+
+        <!-- 3. CARE TAB (돌보기 / 교감) -->
+        <section id="tab-care" class="tab-content w-full flex-col items-center hidden">
+            <div class="w-full glass-panel rounded-3xl p-6 flex flex-col items-center relative shadow-xl">
+                <h2 class="text-2xl font-jua text-pink-600 mb-1 flex items-center space-x-2">
+                    <span>💖</span> <span>고양이 쉼터 & 교감</span>
+                </h2>
+                <p class="text-xs text-slate-500 mb-4">수집한 고양이와 교감하고 친밀도를 높여보세요!</p>
+
+                <!-- Selector dropdown if user has caught cats -->
+                <div id="careSelectWrapper" class="w-full max-w-xs mb-4">
+                    <select id="careCatSelect" onchange="changeCareCat(this.value)" class="w-full py-2 px-4 rounded-full bg-white border border-pink-200 font-jua text-slate-700 shadow-sm focus:outline-none">
+                        <!-- Options generated -->
+                    </select>
+                </div>
+
+                <!-- Pet Stage Area -->
+                <div id="careStage" class="w-full max-w-md h-72 rounded-3xl bg-gradient-to-b from-purple-50 via-pink-50 to-amber-50 border-2 border-white shadow-inner relative flex flex-col items-center justify-center cursor-pointer overflow-hidden" onclick="handlePetClick(event)">
+                    <div id="careHeartContainer" class="absolute inset-0 pointer-events-none"></div>
+                    
+                    <!-- Cat SVG -->
+                    <div id="careCatSVG" class="w-48 h-48 transition-transform duration-300 transform hover:scale-105 active:scale-95">
+                        <!-- Dynamic SVG -->
+                    </div>
+
+                    <p class="absolute bottom-3 text-xs text-pink-400 font-bold bg-white/80 px-3 py-1 rounded-full shadow-sm pointer-events-none">
+                        ✨ 고양이를 터치하면 쓰다듬어 줄 수 있어요!
+                    </p>
+                </div>
+
+                <!-- Selected Cat Care Status -->
+                <div id="careCatInfo" class="w-full max-w-md mt-4 flex flex-col items-center">
+                    <h3 id="careCatName" class="text-xl font-jua text-slate-800">선택된 고양이</h3>
+                    
+                    <!-- Intimacy Bar -->
+                    <div class="w-full bg-slate-100 rounded-full h-4 relative my-2 overflow-hidden border border-slate-200">
+                        <div id="careIntimacyBar" class="bg-gradient-to-r from-pink-400 to-rose-500 h-full w-10% transition-all duration-300"></div>
+                        <span id="encIntimacyText" class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-700">친밀도 Lv.1 (0/100)</span>
+                    </div>
+
+                    <!-- Interactions Buttons -->
+                    <div class="flex items-center space-x-3 mt-2 w-full">
+                        <button onclick="feedCareCat()" class="flex-1 py-2.5 rounded-2xl bg-gradient-to-r from-pink-400 to-rose-400 text-white font-jua shadow-md hover:brightness-105 active:scale-95 transition flex items-center justify-center space-x-1">
+                            <span>🍡</span> <span>츄르 주기 (-1)</span>
+                        </button>
+                        <button onclick="playCareCat()" class="flex-1 py-2.5 rounded-2xl bg-gradient-to-r from-purple-400 to-indigo-400 text-white font-jua shadow-md hover:brightness-105 active:scale-95 transition flex items-center justify-center space-x-1">
+                            <span>🧶</span> <span>장난감 놀기</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- 4. INVENTORY & SHOP TAB (가방 & 상점) -->
+        <section id="tab-shop" class="tab-content w-full flex-col items-center hidden">
+            <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                <!-- Inventory Panel -->
+                <div class="glass-panel rounded-3xl p-5 flex flex-col">
+                    <h2 class="text-xl font-jua text-slate-800 mb-3 flex items-center space-x-2">
+                        <span>🎒</span> <span>나의 아이템 가방</span>
+                    </h2>
+                    <div id="inventoryList" class="flex flex-col space-y-2.5 flex-1">
+                        <!-- Items injected via JS -->
+                    </div>
+                </div>
+
+                <!-- Shop Panel -->
+                <div class="glass-panel rounded-3xl p-5 flex flex-col">
+                    <h2 class="text-xl font-jua text-pink-600 mb-3 flex items-center space-x-2">
+                        <span>🛍️</span> <span>냥냥 상점</span>
+                    </h2>
+                    <div id="shopList" class="flex flex-col space-y-2.5 flex-1">
+                        <!-- Shop items injected via JS -->
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+
+        <!-- 5. QUESTS TAB (퀘스트) -->
+        <section id="tab-quests" class="tab-content w-full flex-col items-center hidden">
+            <div class="w-full glass-panel rounded-3xl p-5">
+                <h2 class="text-2xl font-jua text-pink-600 mb-1 flex items-center space-x-2">
+                    <span>📜</span> <span>도전 과제 & 퀘스트</span>
+                </h2>
+                <p class="text-xs text-slate-500 mb-4">목표를 달성하고 코인과 간식을 보상으로 받으세요!</p>
+
+                <div id="questList" class="flex flex-col space-y-3">
+                    <!-- Quests injected dynamically -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+
+    <!-- BOTTOM NAVIGATION BAR (Mobile First) -->
+    <nav class="fixed bottom-0 left-0 right-0 glass-panel border-t border-white/80 py-2 px-4 z-40 flex items-center justify-around max-w-4xl mx-auto md:rounded-full md:bottom-4 md:shadow-2xl">
+        <button onclick="switchTab('explore')" class="nav-btn active flex flex-col items-center text-pink-500 transition" data-tab="explore">
+            <i class="fas fa-compass text-lg"></i>
+            <span class="text-[10px] font-bold mt-0.5">탐험</span>
+        </button>
+        <button onclick="switchTab('catdex')" class="nav-btn flex flex-col items-center text-slate-400 hover:text-pink-500 transition" data-tab="catdex">
+            <i class="fas fa-book-open text-lg"></i>
+            <span class="text-[10px] font-bold mt-0.5">도감</span>
+        </button>
+        <button onclick="switchTab('care')" class="nav-btn flex flex-col items-center text-slate-400 hover:text-pink-500 transition" data-tab="care">
+            <i class="fas fa-heart text-lg"></i>
+            <span class="text-[10px] font-bold mt-0.5">돌보기</span>
+        </button>
+        <button onclick="switchTab('shop')" class="nav-btn flex flex-col items-center text-slate-400 hover:text-pink-500 transition" data-tab="shop">
+            <i class="fas fa-shopping-bag text-lg"></i>
+            <span class="text-[10px] font-bold mt-0.5">상점/가방</span>
+        </button>
+        <button onclick="switchTab('quests')" class="nav-btn flex flex-col items-center text-slate-400 hover:text-pink-500 transition" data-tab="quests">
+            <i class="fas fa-tasks text-lg"></i>
+            <span class="text-[10px] font-bold mt-0.5">퀘스트</span>
+        </button>
+    </nav>
+
+
+    <!-- MODALS -->
+
+    <!-- 1. CAT DETAIL MODAL -->
+    <div id="catDetailModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel w-full max-w-sm rounded-3xl p-6 flex flex-col items-center relative animate-float shadow-2xl">
+            <button onclick="closeCatDetailModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl">
+                <i class="fas fa-times-circle"></i>
+            </button>
+            
+            <span id="modalCatRarity" class="text-xs px-3 py-0.5 rounded-full font-bold text-white bg-pink-500 mb-2">Legendary</span>
+            
+            <div id="modalCatSVG" class="w-48 h-48 my-2">
+                <!-- SVG injected -->
+            </div>
+
+            <h3 id="modalCatName" class="text-2xl font-jua text-slate-800">고양이 이름</h3>
+            <p id="modalCatTag" class="text-xs text-pink-500 font-bold mb-2">#속성 #성격</p>
+            
+            <p id="modalCatDesc" class="text-xs text-slate-600 text-center bg-slate-50 p-3 rounded-2xl border border-slate-200/60 w-full mb-3">
+                고양이 상세 메인 설명입니다.
+            </p>
+
+            <div class="w-full flex justify-between items-center text-xs text-slate-500 border-t border-slate-200 pt-3">
+                <span>서식지: <strong id="modalCatHabitat" class="text-slate-700">햇살 꽃밭</strong></span>
+                <span>포획 횟수: <strong id="modalCatCatchCount" class="text-slate-700">1회</strong></span>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 2. PROFILE & SHARE MODAL -->
+    <div id="shareModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel w-full max-w-sm rounded-3xl p-6 flex flex-col items-center relative shadow-2xl">
+            <button onclick="closeShareModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl">
+                <i class="fas fa-times-circle"></i>
+            </button>
+
+            <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-pink-400 to-purple-400 flex items-center justify-center text-3xl shadow-md mb-2">
+                🐱
+            </div>
+            
+            <h3 class="text-xl font-jua text-slate-800">모험가 프로필</h3>
+            <p class="text-xs text-slate-500 mb-4">나의 고양이 컬렉션을 자랑해보세요!</p>
+
+            <div class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-200/80 mb-4 space-y-2 text-xs">
+                <div class="flex justify-between">
+                    <span class="text-slate-500">도감 수집률:</span>
+                    <span id="shareDexPercent" class="font-bold text-pink-600">0%</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">발견한 고양이:</span>
+                    <span id="shareCatCount" class="font-bold text-purple-600">0종</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">대표 고양이:</span>
+                    <span id="shareRepCat" class="font-bold text-amber-600">크림 아기냥</span>
+                </div>
+            </div>
+
+            <button onclick="copyShareLink()" class="w-full py-3 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 text-white font-jua text-sm shadow-md hover:brightness-105 active:scale-98 transition flex items-center justify-center space-x-2">
+                <i class="fas fa-copy"></i>
+                <span>게임 공유 링크 복사하기</span>
+            </button>
+            <p id="shareCopyMsg" class="text-[11px] text-emerald-600 font-bold mt-2 hidden">✨ 링크가 클립보드에 복사되었습니다!</p>
+            
+            <div class="mt-4 pt-3 border-t border-slate-200 w-full flex justify-between items-center text-[11px] text-slate-400">
+                <button onclick="resetGameData()" class="text-rose-400 hover:underline">데이터 초기화</button>
+                <span>v1.0.0 Free Edition</span>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- GAME SCRIPT -->
+    <script>
+        /* ==========================================================================
+           1. MASTER DATA DEFINITIONS (32 Dynamic Cats & Regions)
+           ========================================================================== */
+        
+        const REGIONS = [
+            { id: 'flower', name: '햇살 꽃밭', icon: '🌸', reqLv: 1, bgGradient: 'from-pink-100 to-amber-100', catIds: [1,2,3,4,5,6,13,15,23] },
+            { id: 'forest', name: '비밀의 숲', icon: '🌲', reqLv: 2, bgGradient: 'from-emerald-100 to-teal-100', catIds: [4,7,8,9,11,14,24,29] },
+            { id: 'cloud', name: '무지개 구름', icon: '☁️', reqLv: 3, bgGradient: 'from-sky-100 to-indigo-100', catIds: [6,10,12,18,22,27,31] },
+            { id: 'beach', name: '바다 방울 언덕', icon: '🌊', reqLv: 4, bgGradient: 'from-cyan-100 to-blue-100', catIds: [8,17,21,25,28] },
+            { id: 'moon', name: '달빛 정원', icon: '🌙', reqLv: 5, bgGradient: 'from-purple-100 to-slate-200', catIds: [9,10,16,19,20,26,30] },
+            { id: 'galaxy', name: '별빛 은하수', icon: '🌌', reqLv: 6, bgGradient: 'from-slate-200 via-purple-200 to-indigo-200', catIds: [22,23,26,29,30,31,32] }
+        ];
+
+        const RARITY_COLORS = {
+            'Common': { bg: 'bg-slate-400', text: 'text-slate-600', border: 'border-slate-300', rate: 0.60 },
+            'Rare': { bg: 'bg-sky-500', text: 'text-sky-600', border: 'border-sky-300', rate: 0.25 },
+            'Epic': { bg: 'bg-purple-500', text: 'text-purple-600', border: 'border-purple-300', rate: 0.10 },
+            'Legendary': { bg: 'bg-amber-500', text: 'text-amber-600', border: 'border-amber-300', rate: 0.04 },
+            'Mythical': { bg: 'bg-rose-500', text: 'text-rose-600', border: 'border-rose-400', rate: 0.01 }
+        };
+
+        // Master 32 Unique Cats List with Attributes & Visual Traits
+        const CATS = [
+            { id: 1, name: '크림 아기냥', rarity: 'Common', habitat: '햇살 꽃밭', trait: '순둥이', coat: '#FFF8DC', ears: '#F5DEB3', eyes: '#87CEEB', accessory: 'ribbon', desc: '따스한 햇살 아래서 낮잠 자는 것을 가장 좋아하는 복슬복슬한 아기 고양이.' },
+            { id: 2, name: '고등어 태비', rarity: 'Common', habitat: '햇살 꽃밭', trait: '호기심', coat: '#A9A9A9', ears: '#696969', eyes: '#32CD32', accessory: 'none', desc: '골목길과 풀숲을 쌩쌩 누비며 새로운 장소를 탐험하는 재빠른 고양이.' },
+            { id: 3, name: '치즈 길냥이', rarity: 'Common', habitat: '햇살 꽃밭', trait: '애교쟁이', coat: '#FFB84D', ears: '#E68A00', eyes: '#FFD700', accessory: 'none', desc: '사람만 보면 부비부비 골골송을 부르는 애교 만점 치즈냥.' },
+            { id: 4, name: '점박이 꼬식이', rarity: 'Common', habitat: '비밀의 숲', trait: '엉뚱함', coat: '#FFFFFF', ears: '#333333', eyes: '#1E90FF', accessory: 'none', desc: '등에 하트 모양 점이 있는 엉뚱하고 매력 넘치는 고양이.' },
+            { id: 5, name: '먼치킨 꼬마', rarity: 'Common', habitat: '햇살 꽃밭', trait: '귀염둥이', coat: '#FFE4E1', ears: '#FFB6C1', eyes: '#87CEFA', accessory: 'none', desc: '짧은 다리로 꼬물꼬물 걸어다니는 앙증맞은 고양이.' },
+            { id: 6, name: '분홍 모찌냥', rarity: 'Common', habitat: '무지개 구름', trait: '말랑이', coat: '#FFD1DC', ears: '#FF9EAA', eyes: '#FF69B4', accessory: 'ribbon', desc: '말랑말랑 분홍빛 젤리가 매력적인 달콤한 고양이.' },
+            { id: 7, name: '삼색 오솔길냥', rarity: 'Common', habitat: '비밀의 숲', trait: '차분함', coat: '#FAF0E6', ears: '#D2691E', eyes: '#228B22', accessory: 'none', desc: '세 가지 색 털이 완벽한 조화를 이루는 길거리의 인기 스타.' },
+            { id: 8, name: '회색 젤리냥', rarity: 'Common', habitat: '바다 방울 언덕', trait: '느긋함', coat: '#C0C0C0', ears: '#708090', eyes: '#00CED1', accessory: 'none', desc: '바람이 불어도 요지부동, 느긋하게 바다를 바라보는 고양이.' },
+            { id: 9, name: '깜냥이 눈동자', rarity: 'Common', habitat: '달빛 정원', trait: '시크함', coat: '#2F2F2F', ears: '#1A1A1A', eyes: '#FFD700', accessory: 'none', desc: '밤이 되면 황금빛 눈동자만 반짝이는 비밀스러운 까망이.' },
+            { id: 10, name: '턱시도 젠틀맨', rarity: 'Common', habitat: '달빛 정원', trait: '신사적', coat: '#1C1C1C', ears: '#000000', eyes: '#98FB98', accessory: 'ribbon', desc: '언제나 턱시도를 차려입은 듯 품위 있게 행동하는 신사 고양이.' },
+            { id: 11, name: '연잎 개구리냥', rarity: 'Common', habitat: '비밀의 숲', trait: '엉뚱함', coat: '#D0F0C0', ears: '#8FBC8F', eyes: '#00FF7F', accessory: 'none', desc: '비 오는 날이면 머리에 연잎을 쓰고 나들이를 즐긴다.' },
+            { id: 12, name: '복숭아 냥이', rarity: 'Common', habitat: '무지개 구름', trait: '상큼함', coat: '#FFDAB9', ears: '#FA8072', eyes: '#FF1493', accessory: 'strawberry_hat', desc: '달콤한 복숭아 향기를 풍기며 둥둥 떠다니는 고양이.' },
+            { id: 13, name: '딸기 모자냥', rarity: 'Rare', habitat: '햇살 꽃밭', trait: '달콤함', coat: '#FFF0F5', ears: '#FFB6C1', eyes: '#FF1493', accessory: 'strawberry_hat', desc: '탐스러운 딸기 모자를 쓰고 꽃밭을 누비는 인기 고양이.' },
+            { id: 14, name: '민트 초코냥', rarity: 'Rare', habitat: '비밀의 숲', trait: '청량함', coat: '#AAF0D1', ears: '#4B382A', eyes: '#00FA9A', accessory: 'none', desc: '호불호가 갈리지 않는 완벽한 청량함! 시원한 민트 향 고양이.' },
+            { id: 15, name: '수국 보라냥', rarity: 'Rare', habitat: '햇살 꽃밭', trait: '우아함', coat: '#E6E6FA', ears: '#9370DB', eyes: '#8A2BE2', accessory: 'flower_vine', desc: '수국 꽃잎 장식을 두른 우아하고 아름다운 자태의 고양이.' },
+            { id: 16, name: '나비 추적자', rarity: 'Rare', habitat: '달빛 정원', trait: '민첩함', coat: '#F5F5DC', ears: '#CD853F', eyes: '#FFA500', accessory: 'none', desc: '밤하늘을 날아다니는 빛나는 나비를 쫓는 민첩한 고양이.' },
+            { id: 17, name: '방울 해변냥', rarity: 'Rare', habitat: '바다 방울 언덕', trait: '장난꾸러기', coat: '#E0FFFF', ears: '#48D1CC', eyes: '#00BFFF', accessory: 'water_bubble', desc: '바핏방울 속에서 파도를 타며 놀기 좋아하는 수영 선수.' },
+            { id: 18, name: '구름 날개냥', rarity: 'Rare', habitat: '무지개 구름', trait: '꿈꾸는', coat: '#F0F8FF', ears: '#B0C4DE', eyes: '#1E90FF', accessory: 'wings', desc: '작고 귀여운 날개로 솜사탕 구름 위를 날아다니는 고양이.' },
+            { id: 19, name: '잠꾸러기 벼개냥', rarity: 'Rare', habitat: '달빛 정원', trait: '게으름', coat: '#FFF8DC', ears: '#DEB887', eyes: '#4682B4', accessory: 'none', desc: '푹신한 베개를 항상 지니고 다니며 어디서든 잠에 빠진다.' },
+            { id: 20, name: '마법사 꼬마냥', rarity: 'Rare', habitat: '달빛 정원', trait: '신비로움', coat: '#E6E6FA', ears: '#4B0082', eyes: '#FFD700', accessory: 'wizard_hat', desc: '작은 별빛 마법을 부릴 줄 아는 마법학교의 미식가 고양이.' },
+            { id: 21, name: '헤드폰 음악냥', rarity: 'Rare', habitat: '바다 방울 언덕', trait: '신남', coat: '#F0FFF0', ears: '#3CB371', eyes: '#00FF7F', accessory: 'headphones', desc: '신나는 비트에 맞춰 언제나 둠칫둠칫 고개를 흔드는 뮤지션.' },
+            { id: 22, name: '별사탕 냥이', rarity: 'Rare', habitat: '별빛 은하수', trait: '반짝임', coat: '#FFFACD', ears: '#FFD700', eyes: '#FF69B4', accessory: 'star_dust', desc: '달콤한 별사탕 가루를 흩날리며 밤하늘을 조용히 누빈다.' },
+            { id: 23, name: '천사 깃털냥', rarity: 'Epic', habitat: '햇살 꽃밭', trait: '성스러움', coat: '#FFFFFF', ears: '#FFE4E1', eyes: '#00BFFF', accessory: 'wings', desc: '마음이 순수한 자에게만 모습을 드러내는 눈부신 천사 고양이.' },
+            { id: 24, name: '숲의 덩굴냥', rarity: 'Epic', habitat: '비밀의 숲', trait: '수호자', coat: '#98FB98', ears: '#2E8B57', eyes: '#006400', accessory: 'flower_vine', desc: '오랜 시간 숲을 지켜온 고대의 정령과 교감하는 신비한 수호자.' },
+            { id: 25, name: '파도 물방울냥', rarity: 'Epic', habitat: '바다 방울 언덕', trait: '청량함', coat: '#B0E0E6', ears: '#4682B4', eyes: '#000080', accessory: 'water_bubble', desc: '투명한 바다 물방울 아우라를 두르고 있는 영롱한 바다 고양이.' },
+            { id: 26, name: '달빛 몽환냥', rarity: 'Epic', habitat: '달빛 정원', trait: '몽환적', coat: '#D8BFD8', ears: '#8B008B', eyes: '#FF00FF', accessory: 'moon_crest', desc: '이마에 신비로운 초승달 문양이 새겨진 밤의 여왕 고양이.' },
+            { id: 27, name: '무지개 구름냥', rarity: 'Epic', habitat: '무지개 구름', trait: '화려함', coat: '#FFF0F5', ears: '#FF69B4', eyes: '#4169E1', accessory: 'wings', desc: '일곱 빛깔 무지개 다리를 만드는 하늘 세계의 특별한 안내자.' },
+            { id: 28, name: '사탕수수 유니콘냥', rarity: 'Epic', habitat: '바다 방울 언덕', trait: '환상적', coat: '#F5FFFA', ears: '#FFB6C1', eyes: '#9932CC', accessory: 'crown', desc: '반짝이는 유니콘 뿔을 지닌 전설 속 환상의 에픽 고양이.' },
+            { id: 29, name: '별빛 은하수냥', rarity: 'Legendary', habitat: '별빛 은하수', trait: '신성함', coat: '#191970', ears: '#4B0082', eyes: '#00FFFF', accessory: 'star_dust', desc: '우주의 별빛을 담은 털을 가진 극도로 희귀한 전설의 고양이.' },
+            { id: 30, name: '영원의 여왕냥', rarity: 'Legendary', habitat: '달빛 정원', trait: '고귀함', coat: '#FFFFF0', ears: '#FFD700', eyes: '#FF1493', accessory: 'crown', desc: '냥글냥글 월드의 고양이들이 우러러보는 고귀한 여왕 고양이.' },
+            { id: 31, name: '시공간 탐험냥', rarity: 'Legendary', habitat: '별빛 은하수', trait: '초월적', coat: '#2E0854', ears: '#9370DB', eyes: '#7FFFD4', accessory: 'wizard_hat', desc: '차원과 시공간을 자유롭게 넘나드는 전설 속 신비의 모험가.' },
+            { id: 32, name: '태초의 신화냥', rarity: 'Mythical', habitat: '별빛 은하수', trait: '전능함', coat: '#FFFFFF', ears: '#FFD700', eyes: '#00FFFF', accessory: 'crown', desc: '세상이 처음 태어날 때 존재했다고 전해지는 세상 단 하나뿐인 신화의 고양이.' }
+        ];
+
+        /* ==========================================================================
+           2. GAME STATE MANAGEMENT & STORAGE
+           ========================================================================== */
+
+        let gameState = {
+            level: 1,
+            exp: 0,
+            energy: 10,
+            maxEnergy: 10,
+            coins: 100,
+            caughtCats: {}, // { catId: { count: 1, intimacy: 10 } }
+            inventory: {
+                churu: 3,
+                toy: 2,
+                catnip: 1
+            },
+            completedQuests: [],
+            soundEnabled: true
+        };
+
+        let currentEncounterCat = null;
+        let currentCareCatId = null;
+        let encounterCatchBonus = 0;
+
+        // Quests Data
+        const QUESTS = [
+            { id: 'q1', title: '첫 고양이 발견!', desc: '고양이를 1마리 수집하세요.', rewardCoins: 50, rewardItem: 'churu', condition: (state) => Object.keys(state.caughtCats).length >= 1 },
+            { id: 'q2', title: '냥냥 애호가', desc: '고양이를 5종류 수집하세요.', rewardCoins: 150, rewardItem: 'toy', condition: (state) => Object.keys(state.caughtCats).length >= 5 },
+            { id: 'q3', title: '도감의 달인', desc: '고양이를 10종류 수집하세요.', rewardCoins: 300, rewardItem: 'catnip', condition: (state) => Object.keys(state.caughtCats).length >= 10 },
+            { id: 'q4', title: '전설과의 만남', desc: 'Legendary 또는 Mythical 고양이를 수집하세요.', rewardCoins: 500, rewardItem: 'churu', condition: (state) => {
+                return Object.keys(state.caughtCats).some(id => {
+                    const c = CATS.find(x => x.id == id);
+                    return c && (c.rarity === 'Legendary' || c.rarity === 'Mythical');
+                });
+            }}
+        ];
+
+        // Save & Load LocalStorage
+        function saveGame() {
+            try {
+                localStorage.setItem('nyang_world_save', JSON.stringify(gameState));
+            } catch(e) { console.error('Save failed', e); }
+        }
+
+        function loadGame() {
+            try {
+                const saved = localStorage.getItem('nyang_world_save');
+                if (saved) {
+                    gameState = { ...gameState, ...JSON.parse(saved) };
+                }
+            } catch(e) { console.error('Load failed', e); }
+        }
+
+        function resetGameData() {
+            if (confirm('정말로 모든 게임 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                localStorage.removeItem('nyang_world_save');
+                location.reload();
+            }
+        }
+
+        /* ==========================================================================
+           3. AUDIO SYNTHESIZER (Web Audio API - Pure JS)
+           ========================================================================== */
+
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!gameState.soundEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'click') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            } else if (type === 'meow') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(550, now);
+                osc.frequency.exponentialRampToValueAtTime(850, now + 0.15);
+                osc.frequency.exponentialRampToValueAtTime(450, now + 0.35);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            } else if (type === 'chime') {
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                    gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.5);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + idx * 0.08);
+                    osc.stop(now + idx * 0.08 + 0.5);
+                });
+            } else if (type === 'catch_success') {
+                const notes = [440, 554.37, 659.25, 880];
+                notes.forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                    gain.gain.setValueAtTime(0.25, now + idx * 0.1);
+                    gain.gain.linearRampToValueAtTime(0.01, now + idx * 0.1 + 0.4);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + idx * 0.1);
+                    osc.stop(now + idx * 0.1 + 0.4);
+                });
+            }
+        }
+
+        function toggleAudio() {
+            gameState.soundEnabled = !gameState.soundEnabled;
+            const btn = document.getElementById('audioBtn');
+            if (gameState.soundEnabled) {
+                btn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                btn.classList.remove('text-slate-400');
+                btn.classList.add('text-slate-600');
+            } else {
+                btn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                btn.classList.add('text-slate-400');
+            }
+            saveGame();
+        }
+
+        /* ==========================================================================
+           4. SVG DYNAMIC CAT GENERATOR ENGINE
+           ========================================================================== */
+
+        function generateCatSVG(cat, isSilhouette = false) {
+            if (isSilhouette) {
+                return `
+                <svg viewBox="0 0 200 200" class="w-full h-full drop-shadow-md">
+                    <!-- Base Silhouette Contour -->
+                    <g fill="#334155" opacity="0.95">
+                        <!-- Ears -->
+                        <polygon points="50,60 30,10 80,45" />
+                        <polygon points="150,60 170,10 120,45" />
+                        <!-- Tail -->
+                        <path d="M 140 140 Q 180 120 170 80 Q 160 70 155 85 Q 160 110 135 130 Z" />
+                        <!-- Body -->
+                        <ellipse cx="100" cy="135" rx="50" ry="40" />
+                        <!-- Head -->
+                        <circle cx="100" cy="85" r="42" />
+                    </g>
+                    <!-- Question Mark Icon -->
+                    <text x="100" y="100" font-family="Jua" font-size="45" fill="#FFFFFF" text-anchor="middle" opacity="0.6">?</text>
+                </svg>`;
+            }
+
+            const coat = cat.coat || '#FFF8DC';
+            const ears = cat.ears || '#F5DEB3';
+            const eyes = cat.eyes || '#87CEEB';
+
+            // Custom accessories
+            let accessorySVG = '';
+            if (cat.accessory === 'ribbon') {
+                accessorySVG = `<path d="M 90 120 L 80 115 L 80 125 Z M 110 120 L 120 115 L 120 125 Z" fill="#FF477E"/>
+                                <circle cx="100" cy="120" r="5" fill="#FF0054"/>`;
+            } else if (cat.accessory === 'strawberry_hat') {
+                accessorySVG = `<path d="M 70 55 Q 100 20 130 55 Z" fill="#FF4D6D"/>
+                                <circle cx="100" cy="22" r="4" fill="#38B000"/>
+                                <circle cx="85" cy="42" r="1.5" fill="#FFF"/>
+                                <circle cx="105" cy="38" r="1.5" fill="#FFF"/>
+                                <circle cx="115" cy="48" r="1.5" fill="#FFF"/>`;
+            } else if (cat.accessory === 'wings') {
+                accessorySVG = `<g fill="#FFFFFF" opacity="0.9" stroke="#E2E8F0" stroke-width="1">
+                                    <path d="M 45 110 Q 10 90 25 120 Q 35 130 50 125 Z"/>
+                                    <path d="M 155 110 Q 190 90 175 120 Q 165 130 150 125 Z"/>
+                                </g>`;
+            } else if (cat.accessory === 'crown') {
+                accessorySVG = `<polygon points="82,48 88,30 95,42 100,25 105,42 112,30 118,48" fill="#FFD700" stroke="#DAA520" stroke-width="1"/>
+                                <circle cx="100" cy="25" r="2" fill="#FF0000"/>`;
+            } else if (cat.accessory === 'water_bubble') {
+                accessorySVG = `<circle cx="100" cy="100" r="75" fill="none" stroke="#70D6FF" stroke-width="3" opacity="0.6" stroke-dasharray="8 4"/>`;
+            } else if (cat.accessory === 'star_dust') {
+                accessorySVG = `<g fill="#FFD700" opacity="0.8">
+                                    <path d="M 40 50 L 43 56 L 50 57 L 45 62 L 46 68 L 40 65 L 34 68 L 35 62 L 30 57 L 37 56 Z"/>
+                                    <path d="M 155 60 L 157 64 L 162 65 L 158 69 L 159 74 L 155 71 L 151 74 L 152 69 L 148 65 L 153 64 Z"/>
+                                </g>`;
+            } else if (cat.accessory === 'flower_vine') {
+                accessorySVG = `<path d="M 60 135 Q 100 160 140 135" fill="none" stroke="#70E000" stroke-width="4"/>
+                                <circle cx="80" cy="143" r="5" fill="#FF85A1"/>
+                                <circle cx="120" cy="143" r="5" fill="#FF85A1"/>`;
+            } else if (cat.accessory === 'wizard_hat') {
+                accessorySVG = `<path d="M 65 55 L 100 10 L 135 55 Z" fill="#5A189A"/>
+                                <ellipse cx="100" cy="55" rx="40" ry="8" fill="#3C096C"/>
+                                <polygon points="100,25 103,32 110,32 105,36 107,42 100,38 93,42 95,36 90,32 97,32" fill="#FFD700"/>`;
+            } else if (cat.accessory === 'moon_crest') {
+                accessorySVG = `<path d="M 100 55 A 8 8 0 0 0 100 71 A 10 10 0 0 1 100 55 Z" fill="#F72585"/>`;
+            } else if (cat.accessory === 'headphones') {
+                accessorySVG = `<path d="M 50 80 A 52 52 0 0 1 150 80" fill="none" stroke="#4895EF" stroke-width="6"/>
+                                <rect x="42" y="70" width="14" height="25" rx="5" fill="#4361EE"/>
+                                <rect x="144" y="70" width="14" height="25" rx="5" fill="#4361EE"/>`;
+            }
+
+            return `
+            <svg viewBox="0 0 200 200" class="w-full h-full drop-shadow-lg">
+                <!-- Background Accessories / Aura (Wings, Bubbles) -->
+                ${cat.accessory === 'wings' || cat.accessory === 'water_bubble' || cat.accessory === 'star_dust' ? accessorySVG : ''}
+
+                <!-- Tail -->
+                <path d="M 140 140 Q 185 115 170 75 Q 155 60 150 80 Q 155 105 135 130 Z" fill="${coat}" stroke="${ears}" stroke-width="2"/>
+
+                <!-- Left & Right Paws (Back) -->
+                <ellipse cx="70" cy="165" rx="14" ry="9" fill="${coat}" stroke="${ears}" stroke-width="1.5"/>
+                <ellipse cx="130" cy="165" rx="14" ry="9" fill="${coat}" stroke="${ears}" stroke-width="1.5"/>
+
+                <!-- Body -->
+                <ellipse cx="100" cy="135" rx="48" ry="38" fill="${coat}"/>
+
+                <!-- Belly Patch -->
+                <ellipse cx="100" cy="140" rx="30" ry="24" fill="#FFFFFF" opacity="0.7"/>
+
+                <!-- Ears -->
+                <g>
+                    <!-- Left Ear -->
+                    <polygon points="52,62 30,12 78,45" fill="${coat}" stroke="${ears}" stroke-width="2"/>
+                    <polygon points="50,55 36,20 70,42" fill="${ears}" opacity="0.6"/>
+                    
+                    <!-- Right Ear -->
+                    <polygon points="148,62 170,12 122,45" fill="${coat}" stroke="${ears}" stroke-width="2"/>
+                    <polygon points="150,55 164,20 130,42" fill="${ears}" opacity="0.6"/>
+                </g>
+
+                <!-- Head -->
+                <circle cx="100" cy="85" r="42" fill="${coat}"/>
+
+                <!-- Head Overlay Accessories (Hats, Crown, Headphones) -->
+                ${cat.accessory !== 'wings' && cat.accessory !== 'water_bubble' && cat.accessory !== 'star_dust' ? accessorySVG : ''}
+
+                <!-- Cheeks (Blush) -->
+                <ellipse cx="70" cy="95" rx="8" ry="5" fill="#FFB6C1" opacity="0.8"/>
+                <ellipse cx="130" cy="95" rx="8" ry="5" fill="#FFB6C1" opacity="0.8"/>
+
+                <!-- Eyes -->
+                <g>
+                    <!-- Left Eye -->
+                    <ellipse cx="76" cy="82" rx="8" ry="11" fill="#2B2D42"/>
+                    <ellipse cx="76" cy="82" rx="6" ry="9" fill="${eyes}"/>
+                    <circle cx="74" cy="78" r="3" fill="#FFFFFF"/>
+                    <circle cx="78" cy="85" r="1.5" fill="#FFFFFF"/>
+
+                    <!-- Right Eye -->
+                    <ellipse cx="124" cy="82" rx="8" ry="11" fill="#2B2D42"/>
+                    <ellipse cx="124" cy="82" rx="6" ry="9" fill="${eyes}"/>
+                    <circle cx="122" cy="78" r="3" fill="#FFFFFF"/>
+                    <circle cx="126" cy="85" r="1.5" fill="#FFFFFF"/>
+                </g>
+
+                <!-- Nose & Mouth -->
+                <path d="M 97 92 L 103 92 L 100 96 Z" fill="#FF85A1"/>
+                <path d="M 94 98 Q 100 104 100 98 Q 100 104 106 98" fill="none" stroke="#2B2D42" stroke-width="2" stroke-linecap="round"/>
+
+                <!-- Whiskers -->
+                <g stroke="#2B2D42" stroke-width="1.5" opacity="0.7" stroke-linecap="round">
+                    <line x1="55" y1="88" x2="35" y2="85"/>
+                    <line x1="55" y1="93" x2="32" y2="95"/>
+                    <line x1="145" y1="88" x2="165" y2="85"/>
+                    <line x1="145" y1="93" x2="168" y2="95"/>
+                </g>
+            </svg>`;
+        }
+
+        /* ==========================================================================
+           5. EXPLORATION & ENCOUNTER SYSTEM
+           ========================================================================== */
+
+        function renderRegions() {
+            const container = document.getElementById('regionSelectContainer');
+            container.innerHTML = '';
+
+            REGIONS.forEach(reg => {
+                const isLocked = gameState.level < reg.reqLv;
+                const card = document.createElement('div');
+                card.className = `glass-panel rounded-3xl p-5 flex flex-col justify-between relative overflow-hidden transition-all duration-300 ${isLocked ? 'opacity-60 cursor-not-allowed' : 'hover:scale-102 hover:shadow-xl cursor-pointer'}`;
+                
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-3xl p-2 bg-white/80 rounded-2xl shadow-sm">${reg.icon}</span>
+                            <div>
+                                <h3 class="text-lg font-jua text-slate-800">${reg.name}</h3>
+                                <p class="text-xs text-slate-500">필요 레벨: Lv.${reg.reqLv}</p>
+                            </div>
+                        </div>
+                        ${isLocked ? '<span class="text-rose-500 font-bold text-xs bg-rose-50 px-2 py-1 rounded-full"><i class="fas fa-lock"></i> 잠김</span>' : '<span class="text-emerald-500 font-bold text-xs bg-emerald-50 px-2 py-1 rounded-full">탐험 가능</span>'}
+                    </div>
+
+                    <button onclick="${isLocked ? '' : `startExploration('${reg.id}')`}" class="w-full py-2.5 rounded-2xl font-jua text-sm transition ${isLocked ? 'bg-slate-200 text-slate-400' : 'bg-gradient-to-r from-pink-400 to-purple-400 text-white shadow-md hover:brightness-105 active:scale-95'}">
+                        ${isLocked ? `Lv.${reg.reqLv} 달성 시 해금` : '⚡ 탐험하기 (소모: 1)'}
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function startExploration(regionId) {
+            if (gameState.energy < 1) {
+                alert('탐험 에너지(⚡)가 부족합니다! 잠시 후 자동으로 충전되거나 상점에서 충전해보세요.');
+                return;
+            }
+
+            playSound('click');
+            gameState.energy -= 1;
+            updateUI();
+
+            const region = REGIONS.find(r => r.id === regionId);
+            
+            // Pick cat based on weighted rarity probabilities
+            const availableCatIds = region.catIds;
+            const availableCats = CATS.filter(c => availableCatIds.includes(c.id));
+            
+            // Weighted random selection
+            let totalWeight = 0;
+            const weightedList = availableCats.map(cat => {
+                const w = RARITY_COLORS[cat.rarity].rate;
+                totalWeight += w;
+                return { cat, weight: totalWeight };
+            });
+
+            const rand = Math.random() * totalWeight;
+            const selected = weightedList.find(item => rand <= item.weight).cat;
+
+            currentEncounterCat = selected;
+            encounterCatchBonus = 0;
+
+            // Show Encounter UI
+            document.getElementById('regionSelectContainer').classList.add('hidden');
+            const encArea = document.getElementById('encounterArea');
+            encArea.classList.remove('hidden');
+
+            document.getElementById('encRegionBadge').innerText = `${region.icon} ${region.name}`;
+            document.getElementById('encCatName').innerText = selected.name;
+            document.getElementById('encCatDesc').innerText = selected.desc;
+
+            const rarityBadge = document.getElementById('encCatRarityBadge');
+            rarityBadge.innerText = selected.rarity;
+            rarityBadge.className = `text-xs px-2.5 py-0.5 rounded-full font-bold text-white ${RARITY_COLORS[selected.rarity].bg}`;
+
+            // Inject SVG
+            const catWrapper = document.getElementById('encCatWrapper');
+            catWrapper.innerHTML = generateCatSVG(selected);
+
+            // Trigger Legendary / Mythical Burst Particle Effects!
+            if (selected.rarity === 'Legendary' || selected.rarity === 'Mythical') {
+                triggerLegendaryFX();
+                playSound('chime');
+            } else {
+                playSound('meow');
+            }
+
+            updateCatchProbabilityUI();
+            updateItemCountsUI();
+        }
+
+        function updateCatchProbabilityUI() {
+            if (!currentEncounterCat) return;
+            const baseProb = RARITY_COLORS[currentEncounterCat.rarity].rate * 100;
+            const finalProb = Math.min(95, Math.round(baseProb + 30 + encounterCatchBonus));
+
+            document.getElementById('encProbBar').style.width = `${finalProb}%`;
+            document.getElementById('encProbText').innerText = `포획 성공 확률 ${finalProb}%`;
+        }
+
+        function updateItemCountsUI() {
+            document.getElementById('count-churu').innerText = gameState.inventory.churu;
+            document.getElementById('count-toy').innerText = gameState.inventory.toy;
+            document.getElementById('count-catnip').innerText = gameState.inventory.catnip;
+        }
+
+        function useEncounterItem(itemKey) {
+            if (gameState.inventory[itemKey] <= 0) {
+                alert('해당 아이템 수량이 부족합니다!');
+                return;
+            }
+
+            playSound('click');
+            gameState.inventory[itemKey] -= 1;
+
+            if (itemKey === 'churu') encounterCatchBonus += 15;
+            else if (itemKey === 'toy') encounterCatchBonus += 25;
+            else if (itemKey === 'catnip') encounterCatchBonus += 40;
+
+            updateCatchProbabilityUI();
+            updateItemCountsUI();
+            saveGame();
+        }
+
+        function attemptCatch() {
+            if (!currentEncounterCat) return;
+
+            const catchBtn = document.getElementById('catchBtn');
+            catchBtn.disabled = true;
+            catchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>포획 상자 투척 중...</span>';
+
+            playSound('click');
+
+            const baseProb = RARITY_COLORS[currentEncounterCat.rarity].rate * 100;
+            const finalProb = Math.min(95, Math.round(baseProb + 30 + encounterCatchBonus));
+            const success = (Math.random() * 100) <= finalProb;
+
+            setTimeout(() => {
+                if (success) {
+                    playSound('catch_success');
+                    confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+
+                    // Register in State
+                    const catId = currentEncounterCat.id;
+                    if (!gameState.caughtCats[catId]) {
+                        gameState.caughtCats[catId] = { count: 1, intimacy: 10 };
+                    } else {
+                        gameState.caughtCats[catId].count += 1;
+                        gameState.caughtCats[catId].intimacy = Math.min(100, gameState.caughtCats[catId].intimacy + 5);
+                    }
+
+                    // Add Exp & Coins
+                    const expGain = currentEncounterCat.rarity === 'Mythical' ? 100 : (currentEncounterCat.rarity === 'Legendary' ? 60 : 25);
+                    const coinGain = currentEncounterCat.rarity === 'Mythical' ? 200 : (currentEncounterCat.rarity === 'Legendary' ? 100 : 30);
+                    
+                    addPlayerExp(expGain);
+                    gameState.coins += coinGain;
+
+                    alert(`🎉 축하합니다! [${currentEncounterCat.name}] 포획에 성공했습니다!\n(+${expGain} EXP, +${coinGain} 코인)`);
+                    checkQuests();
+                    leaveEncounter();
+                } else {
+                    playSound('meow');
+                    alert(`앗! [${currentEncounterCat.name}](이)가 상자에서 요리조리 빠져나갔습니다! 다시 시도해보세요.`);
+                }
+
+                catchBtn.disabled = false;
+                catchBtn.innerHTML = '<span>📦</span> <span>냥켓몬 상자로 포획 시도!</span>';
+                saveGame();
+                updateUI();
+            }, 1000);
+        }
+
+        function leaveEncounter() {
+            currentEncounterCat = null;
+            document.getElementById('encounterArea').classList.add('hidden');
+            document.getElementById('regionSelectContainer').classList.remove('hidden');
+        }
+
+        /* ==========================================================================
+           6. LEGENDARY STARBURST CANVAS FX
+           ========================================================================== */
+
+        function triggerLegendaryFX() {
+            const canvas = document.getElementById('fxCanvas');
+            canvas.classList.remove('hidden');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const particles = [];
+            const colors = ['#FFD700', '#FF69B4', '#00FFFF', '#70E000', '#FFFFFF'];
+
+            for (let i = 0; i < 120; i++) {
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height / 2,
+                    vx: (Math.random() - 0.5) * 12,
+                    vy: (Math.random() - 0.5) * 12,
+                    radius: Math.random() * 6 + 2,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: 1,
+                    decay: Math.random() * 0.02 + 0.015
+                });
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let alive = false;
+
+                particles.forEach(p => {
+                    if (p.alpha > 0) {
+                        alive = true;
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.alpha -= p.decay;
+
+                        ctx.save();
+                        ctx.globalAlpha = Math.max(0, p.alpha);
+                        ctx.fillStyle = p.color;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                });
+
+                if (alive) {
+                    requestAnimationFrame(animate);
+                } else {
+                    canvas.classList.add('hidden');
+                }
+            }
+
+            animate();
+        }
+
+        /* ==========================================================================
+           7. CATDEX RENDERER & FILTERS
+           ========================================================================== */
+
+        let currentDexFilter = 'all';
+
+        function filterDex(rarity) {
+            currentDexFilter = rarity;
+            document.querySelectorAll('.dex-filter-btn').forEach(btn => {
+                if (btn.dataset.filter === rarity) {
+                    btn.className = 'dex-filter-btn px-3 py-1.5 rounded-full bg-pink-500 text-white shadow-sm';
+                } else {
+                    btn.className = 'dex-filter-btn px-3 py-1.5 rounded-full bg-white text-slate-600 hover:bg-slate-100';
+                }
+            });
+            renderDexGrid();
+        }
+
+        function renderDexGrid() {
+            const grid = document.getElementById('dexGrid');
+            const searchVal = document.getElementById('dexSearchInput').value.trim().toLowerCase();
+            grid.innerHTML = '';
+
+            let caughtCount = 0;
+
+            CATS.forEach(cat => {
+                const isCaught = !!gameState.caughtCats[cat.id];
+                if (isCaught) caughtCount++;
+
+                // Filter check
+                if (currentDexFilter !== 'all' && cat.rarity !== currentDexFilter) return;
+                if (searchVal && !cat.name.toLowerCase().includes(searchVal)) return;
+
+                const card = document.createElement('div');
+                card.className = `glass-panel rounded-2xl p-3 flex flex-col items-center cursor-pointer transition transform hover:scale-105 ${isCaught ? '' : 'opacity-70'}`;
+                card.onclick = () => openCatDetailModal(cat.id);
+
+                card.innerHTML = `
+                    <div class="w-24 h-24 my-1 flex items-center justify-center">
+                        ${generateCatSVG(cat, !isCaught)}
+                    </div>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full font-bold text-white ${isCaught ? RARITY_COLORS[cat.rarity].bg : 'bg-slate-400'} my-1">
+                        ${cat.rarity}
+                    </span>
+                    <h4 class="text-xs font-jua text-slate-800 text-center truncate w-full">
+                        ${isCaught ? cat.name : '???'}
+                    </h4>
+                `;
+                grid.appendChild(card);
+            });
+
+            // Update dex stats
+            const total = CATS.length;
+            const caughtTotal = Object.keys(gameState.caughtCats).length;
+            const percent = Math.round((caughtTotal / total) * 100);
+
+            document.getElementById('dexProgressPercent').innerText = `${caughtTotal} / ${total} (${percent}%)`;
+            document.getElementById('dexProgressBar').style.width = `${percent}%`;
+        }
+
+        function openCatDetailModal(catId) {
+            const cat = CATS.find(c => c.id === catId);
+            if (!cat) return;
+
+            const isCaught = !!gameState.caughtCats[catId];
+            playSound('click');
+
+            document.getElementById('catDetailModal').classList.remove('hidden');
+            document.getElementById('modalCatRarity').innerText = cat.rarity;
+            document.getElementById('modalCatRarity').className = `text-xs px-3 py-0.5 rounded-full font-bold text-white ${RARITY_COLORS[cat.rarity].bg} mb-2`;
+
+            document.getElementById('modalCatSVG').innerHTML = generateCatSVG(cat, !isCaught);
+            document.getElementById('modalCatName').innerText = isCaught ? cat.name : '미발견 고양이';
+            document.getElementById('modalCatTag').innerText = isCaught ? `#${cat.habitat} #${cat.trait}` : '#미확인';
+            document.getElementById('modalCatDesc').innerText = isCaught ? cat.desc : '아직 탐험 중 발견하지 못한 고양이입니다. 여러 지역을 탐험해보세요!';
+            document.getElementById('modalCatHabitat').innerText = cat.habitat;
+            document.getElementById('modalCatCatchCount').innerText = isCaught ? `${gameState.caughtCats[catId].count}회` : '0회';
+        }
+
+        function closeCatDetailModal() {
+            document.getElementById('catDetailModal').classList.add('hidden');
+        }
+
+        /* ==========================================================================
+           8. PET CARE ROOM & INTERACTION SYSTEM
+           ========================================================================== */
+
+        function updateCareRoomUI() {
+            const select = document.getElementById('careCatSelect');
+            select.innerHTML = '';
+
+            const caughtIds = Object.keys(gameState.caughtCats);
+            if (caughtIds.length === 0) {
+                select.innerHTML = '<option value="">보유한 고양이가 없습니다</option>';
+                document.getElementById('careCatSVG').innerHTML = generateCatSVG(CATS[0], true);
+                document.getElementById('careCatName').innerText = '고양이를 먼저 수집해보세요!';
+                return;
+            }
+
+            caughtIds.forEach(id => {
+                const cat = CATS.find(c => c.id == id);
+                if (cat) {
+                    const opt = document.createElement('option');
+                    opt.value = cat.id;
+                    opt.innerText = `${cat.name} (Lv.${Math.floor(gameState.caughtCats[cat.id].intimacy / 10) + 1})`;
+                    select.appendChild(opt);
+                }
+            });
+
+            if (!currentCareCatId || !gameState.caughtCats[currentCareCatId]) {
+                currentCareCatId = caughtIds[0];
+            }
+            select.value = currentCareCatId;
+            changeCareCat(currentCareCatId);
+        }
+
+        function changeCareCat(catId) {
+            if (!catId) return;
+            currentCareCatId = catId;
+            const cat = CATS.find(c => c.id == catId);
+            if (!cat) return;
+
+            document.getElementById('careCatSVG').innerHTML = generateCatSVG(cat);
+            document.getElementById('careCatName').innerText = cat.name;
+
+            const intimacy = gameState.caughtCats[catId].intimacy || 0;
+            const level = Math.floor(intimacy / 10) + 1;
+
+            document.getElementById('careIntimacyBar').style.width = `${intimacy}%`;
+            document.getElementById('encIntimacyText').innerText = `친밀도 Lv.${level} (${intimacy}/100)`;
+        }
+
+        function handlePetClick(e) {
+            if (!currentCareCatId || !gameState.caughtCats[currentCareCatId]) return;
+
+            playSound('meow');
+
+            // Floating Heart Particle
+            const container = document.getElementById('careHeartContainer');
+            const rect = document.getElementById('careStage').getBoundingClientRect();
+            const heart = document.createElement('div');
+            heart.className = 'heart-particle';
+            heart.innerHTML = '💖';
+            heart.style.left = `${e.clientX - rect.left - 10}px`;
+            heart.style.top = `${e.clientY - rect.top - 10}px`;
+            container.appendChild(heart);
+
+            setTimeout(() => heart.remove(), 1200);
+
+            // Increase intimacy slightly
+            gameState.caughtCats[currentCareCatId].intimacy = Math.min(100, gameState.caughtCats[currentCareCatId].intimacy + 2);
+            changeCareCat(currentCareCatId);
+            saveGame();
+        }
+
+        function feedCareCat() {
+            if (!currentCareCatId) return;
+            if (gameState.inventory.churu <= 0) {
+                alert('츄르가 부족합니다! 상점에서 구매해보세요.');
+                return;
+            }
+
+            playSound('meow');
+            gameState.inventory.churu -= 1;
+            gameState.caughtCats[currentCareCatId].intimacy = Math.min(100, gameState.caughtCats[currentCareCatId].intimacy + 15);
+            changeCareCat(currentCareCatId);
+            saveGame();
+            updateUI();
+        }
+
+        function playCareCat() {
+            if (!currentCareCatId) return;
+            playSound('meow');
+            gameState.caughtCats[currentCareCatId].intimacy = Math.min(100, gameState.caughtCats[currentCareCatId].intimacy + 10);
+            changeCareCat(currentCareCatId);
+            saveGame();
+        }
+
+        /* ==========================================================================
+           9. SHOP & INVENTORY UI
+           ========================================================================== */
+
+        const SHOP_ITEMS = [
+            { key: 'churu', name: '달콤한 츄르', icon: '🍡', price: 30, desc: '고양이 포획 확률 +15% 증가' },
+            { key: 'toy', name: '깃털 장난감', icon: '🧸', price: 50, desc: '고양이 포획 확률 +25% 증가' },
+            { key: 'catnip', name: '신선한 캣잎', icon: '🌿', price: 80, desc: '고양이 포획 확률 +40% 증가' }
+        ];
+
+        function renderShopAndInventory() {
+            // Inventory
+            const invContainer = document.getElementById('inventoryList');
+            invContainer.innerHTML = '';
+
+            SHOP_ITEMS.forEach(item => {
+                const qty = gameState.inventory[item.key] || 0;
+                const div = document.createElement('div');
+                div.className = 'bg-white/80 p-3 rounded-2xl border border-slate-200/80 flex items-center justify-between shadow-sm';
+                div.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">${item.icon}</span>
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-800">${item.name}</h4>
+                            <p class="text-[10px] text-slate-500">${item.desc}</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-jua bg-pink-100 text-pink-600 px-3 py-1 rounded-full">보유: ${qty}개</span>
+                `;
+                invContainer.appendChild(div);
+            });
+
+            // Shop
+            const shopContainer = document.getElementById('shopList');
+            shopContainer.innerHTML = '';
+
+            SHOP_ITEMS.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'bg-white/80 p-3 rounded-2xl border border-slate-200/80 flex items-center justify-between shadow-sm';
+                div.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">${item.icon}</span>
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-800">${item.name}</h4>
+                            <p class="text-[10px] text-amber-600 font-bold">🪙 ${item.price} 코인</p>
+                        </div>
+                    </div>
+                    <button onclick="buyShopItem('${item.key}', ${item.price})" class="py-1.5 px-3 bg-gradient-to-r from-pink-400 to-purple-400 text-white font-jua text-xs rounded-xl hover:brightness-105 active:scale-95 shadow-sm">
+                        구매하기
+                    </button>
+                `;
+                shopContainer.appendChild(div);
+            });
+        }
+
+        function buyShopItem(itemKey, price) {
+            if (gameState.coins < price) {
+                alert('코인이 부족합니다! 탐험으로 코인을 더 모아보세요.');
+                return;
+            }
+
+            playSound('click');
+            gameState.coins -= price;
+            gameState.inventory[itemKey] = (gameState.inventory[itemKey] || 0) + 1;
+            saveGame();
+            updateUI();
+            renderShopAndInventory();
+        }
+
+        /* ==========================================================================
+           10. QUESTS & LEVEL SYSTEM
+           ========================================================================== */
+
+        function checkQuests() {
+            QUESTS.forEach(q => {
+                if (!gameState.completedQuests.includes(q.id) && q.condition(gameState)) {
+                    gameState.completedQuests.push(q.id);
+                    gameState.coins += q.rewardCoins;
+                    if (q.rewardItem) {
+                        gameState.inventory[q.rewardItem] = (gameState.inventory[q.rewardItem] || 0) + 1;
+                    }
+                    alert(`📜 퀘스트 완료! [${q.title}]\n보상: +${q.rewardCoins} 코인, ${q.rewardItem ? q.rewardItem + ' +1' : ''}`);
+                }
+            });
+            renderQuests();
+        }
+
+        function renderQuests() {
+            const container = document.getElementById('questList');
+            container.innerHTML = '';
+
+            QUESTS.forEach(q => {
+                const isDone = gameState.completedQuests.includes(q.id);
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-2xl border flex items-center justify-between ${isDone ? 'bg-emerald-50/80 border-emerald-200' : 'bg-white/80 border-slate-200/80'}`;
+                
+                div.innerHTML = `
+                    <div>
+                        <h4 class="text-sm font-jua text-slate-800">${q.title}</h4>
+                        <p class="text-xs text-slate-500">${q.desc}</p>
+                        <p class="text-[11px] text-amber-600 font-bold mt-1">보상: 🪙 ${q.rewardCoins} 코인</p>
+                    </div>
+                    <span class="text-xs font-bold px-3 py-1 rounded-full ${isDone ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'}">
+                        ${isDone ? '완료됨 ✨' : '진행 중'}
+                    </span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function addPlayerExp(amount) {
+            gameState.exp += amount;
+            const reqExp = gameState.level * 50;
+
+            if (gameState.exp >= reqExp) {
+                gameState.level += 1;
+                gameState.exp -= reqExp;
+                gameState.maxEnergy += 2;
+                gameState.energy = gameState.maxEnergy;
+
+                confetti({ particleCount: 100, spread: 80 });
+                alert(`🎊 레벨 업! Player Level Lv.${gameState.level} 달성! (최대 에너지가 증가했습니다)`);
+            }
+        }
+
+        /* ==========================================================================
+           11. NAVIGATION & SHARE MODAL
+           ========================================================================== */
+
+        function switchTab(tabId) {
+            playSound('click');
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if (btn.dataset.tab === tabId) {
+                    btn.classList.add('text-pink-500');
+                    btn.classList.remove('text-slate-400');
+                } else {
+                    btn.classList.remove('text-pink-500');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+
+            if (tabId === 'catdex') renderDexGrid();
+            if (tabId === 'care') updateCareRoomUI();
+            if (tabId === 'shop') renderShopAndInventory();
+            if (tabId === 'quests') renderQuests();
+        }
+
+        function openShareModal() {
+            playSound('click');
+            document.getElementById('shareModal').classList.remove('hidden');
+
+            const total = CATS.length;
+            const caughtTotal = Object.keys(gameState.caughtCats).length;
+            const percent = Math.round((caughtTotal / total) * 100);
+
+            document.getElementById('shareDexPercent').innerText = `${percent}%`;
+            document.getElementById('shareCatCount').innerText = `${caughtTotal}종`;
+
+            const firstCatId = Object.keys(gameState.caughtCats)[0];
+            const repCat = firstCatId ? CATS.find(c => c.id == firstCatId) : null;
+            document.getElementById('shareRepCat').innerText = repCat ? repCat.name : '없음';
+        }
+
+        function closeShareModal() {
+            document.getElementById('shareModal').classList.add('hidden');
+        }
+
+        function copyShareLink() {
+            navigator.clipboard.writeText(window.location.href);
+            const msg = document.getElementById('shareCopyMsg');
+            msg.classList.remove('hidden');
+            setTimeout(() => msg.classList.add('hidden'), 2500);
+        }
+
+        /* ==========================================================================
+           12. CORE UPDATE & AUTO ENERGY REGEN
+           ========================================================================== */
+
+        function updateUI() {
+            document.getElementById('playerLv').innerText = `Lv.${gameState.level}`;
+            const reqExp = gameState.level * 50;
+            document.getElementById('playerExpBar').style.width = `${Math.min(100, (gameState.exp / reqExp) * 100)}%`;
+
+            document.getElementById('playerEnergy').innerText = `${gameState.energy}/${gameState.maxEnergy}`;
+            document.getElementById('playerCoins').innerText = gameState.coins;
+
+            renderRegions();
+        }
+
+        // Energy Regen Interval (1 Energy per 30 seconds)
+        setInterval(() => {
+            if (gameState.energy < gameState.maxEnergy) {
+                gameState.energy += 1;
+                updateUI();
+                saveGame();
+            }
+        }, 30000);
+
+        // INITIALIZATION
+        window.addEventListener('DOMContentLoaded', () => {
+            loadGame();
+            updateUI();
+            renderRegions();
+            renderDexGrid();
+            checkQuests();
+        });
+    </script>
+</body>
+</html>
